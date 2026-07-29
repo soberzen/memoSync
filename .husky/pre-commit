@@ -1,0 +1,4 @@
+#!/usr/bin/env sh
+
+# 检查代码格式
+pnpm lint-staged

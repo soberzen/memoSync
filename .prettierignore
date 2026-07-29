@@ -1,0 +1,12 @@
+# 依赖与打包目录
+node_modules
+.pnpm-store
+dist/*
+
+# 锁定文件与日志
+*.lock
+*.log
+
+# 编辑器配置
+.vscode
+.idea
