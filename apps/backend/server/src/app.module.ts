@@ -22,7 +22,7 @@ import { AuthModule } from './modules/auth/auth.module';
         database: configService.get('DB_NAME'),
         entities: [path.join(__dirname, 'entities', '*.{ts,js}')],
         autoLoadEntities: true,
-        synchronize: true,
+        synchronize: process.env.NODE_ENV === 'development',
       }),
     }),
     AuthModule,

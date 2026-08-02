@@ -7,6 +7,10 @@ import { UserEntity } from '@/entities/user';
 import { Public } from '@/decorators/public.decorator';
 import { RegisterDto } from './dto/register.dto';
 import { AuthService } from './auth.service';
+import {
+  clearRefreshTokenCookie,
+  setRefreshTokenCookie,
+} from './utils/refresh-token-cookie.util';
 
 @Controller('auth')
 export class AuthController {
@@ -22,12 +26,7 @@ export class AuthController {
     const { accessToken, refreshToken } = await this.authService.login(
       req.user
     );
-    res.cookie('refreshToken', refreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: process.env.NODE_ENV === 'production' ? 'lax' : 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
+    setRefreshTokenCookie(res, refreshToken);
     return {
       accessToken,
     };
@@ -48,12 +47,7 @@ export class AuthController {
     const refreshToken = req.cookies.refreshToken;
     const { accessToken, refreshToken: newRefreshToken } =
       await this.authService.refresh({ refreshToken });
-    res.cookie('refreshToken', newRefreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: process.env.NODE_ENV === 'production' ? 'lax' : 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
+    setRefreshTokenCookie(res, newRefreshToken);
     return {
       accessToken,
     };
@@ -67,7 +61,7 @@ export class AuthController {
     const refreshToken = req.cookies.refreshToken;
     await this.authService.logout({ refreshToken });
 
-    res.clearCookie('refreshToken');
+    clearRefreshTokenCookie(res);
 
     return null;
   }
