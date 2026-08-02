@@ -18,7 +18,7 @@ export default function LoginScreen() {
   const [visualState, setVisualState] = useState(INITIAL_VISUAL_STATE);
 
   return (
-    <div className="grid min-h-screen max-h-screen overflow-hidden lg:grid-cols-2">
+    <div className="grid min-h-dvh lg:h-dvh lg:grid-cols-2">
       <div className="relative hidden flex-col justify-between bg-gradient-to-br from-gray-400 via-gray-500 to-gray-600 p-12 text-white dark:from-white/90 dark:via-white/80 dark:to-white/70 dark:text-gray-900 lg:flex">
         <div className="relative z-20">
           <Link
@@ -43,7 +43,7 @@ export default function LoginScreen() {
           />
         </div>
       </div>
-      <div className="flex items-center justify-center bg-background p-8">
+      <div className="flex min-w-0 items-start justify-center bg-background px-6 py-10 sm:px-8 sm:py-12 lg:min-h-0 lg:items-center">
         <LoginForm onVisualStateChange={setVisualState} />
       </div>
     </div>
