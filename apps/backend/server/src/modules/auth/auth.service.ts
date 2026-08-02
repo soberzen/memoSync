@@ -164,6 +164,12 @@ export class AuthService {
       lastUsedAt: usedAt,
     });
   }
+  // 获取用户信息
+  async getProfile(user: UserEntity) {
+    const { name, email, avatarUrl } = user;
+
+    return { name, email, avatarUrl };
+  }
 
   private generateAccessToken(user: UserEntity): string {
     const payload = {

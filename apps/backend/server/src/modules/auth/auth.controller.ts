@@ -1,7 +1,15 @@
 import type { Response, Request } from 'express';
 
 import { AuthGuard } from '@nestjs/passport';
-import { Body, Controller, Post, UseGuards, Res, Req } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Post,
+  UseGuards,
+  Res,
+  Req,
+  Get,
+} from '@nestjs/common';
 import { UserEntity } from '@/entities/user';
 
 import { Public } from '@/decorators/public.decorator';
@@ -64,5 +72,9 @@ export class AuthController {
     clearRefreshTokenCookie(res);
 
     return null;
+  }
+  @Get('profile')
+  async getProfile(@Req() req: Request & { user: UserEntity }) {
+    return this.authService.getProfile(req.user);
   }
 }

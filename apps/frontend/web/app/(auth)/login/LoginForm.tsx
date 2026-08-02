@@ -3,6 +3,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Eye, EyeOff } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { z } from 'zod';
@@ -15,6 +16,7 @@ import { showToast } from '@/utils/toast';
 
 import { login } from '@/service/api/auth';
 import { setToken } from '@/utils/auth';
+import { encrypt } from '@/utils/encrypt';
 
 const loginSchema = z.object({
   email: z.email({ message: '请输入有效的邮箱地址' }),
@@ -37,6 +39,13 @@ export default function LoginForm({ onVisualStateChange }: LoginFormProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isPasswordFocused, setIsPasswordFocused] = useState(false);
+  const searchParams = useSearchParams();
+  const rawRedirect = searchParams.get('redirect') || '/';
+  const redirect =
+    rawRedirect && rawRedirect.startsWith('/') && !rawRedirect.startsWith('//')
+      ? rawRedirect
+      : '/';
+  const router = useRouter();
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -77,6 +86,7 @@ export default function LoginForm({ onVisualStateChange }: LoginFormProps) {
       .then((res) => {
         const { accessToken } = res.data;
         setToken(accessToken);
+        router.replace(redirect);
       })
       .catch(() => {
         showToast.error('登录失败', {

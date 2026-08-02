@@ -3,7 +3,7 @@ import type { BeforeRequestHook, AfterResponseHook, Hooks } from 'ky';
 import ky, { HTTPError } from 'ky';
 import { API_PREFIX } from '@/config';
 import { showToast } from '@/utils/toast';
-import { getToken, setToken } from '@/utils/auth';
+import { getToken, removeToken, setToken } from '@/utils/auth';
 
 import type { IOtherOptions } from './base';
 
@@ -31,6 +31,15 @@ export type FetchOptionType = Omit<RequestInit, 'body'> & {
   body?: BodyInit | Record<string, any> | null;
 };
 
+type PendingRequest = {
+  request: Request;
+  resolve: (request: Request) => void;
+  reject: (error: unknown) => void;
+};
+
+let isRefreshing = false;
+const requestsQueue: PendingRequest[] = [];
+
 const afterResponseErrorCode = (
   otherOptions: IOtherOptions
 ): AfterResponseHook => {
@@ -50,16 +59,6 @@ const afterResponseErrorCode = (
   };
 };
 
-const afterResponseAccessToken: AfterResponseHook = async ({ response }) => {
-  if (/^2\d{2}$/.test(String(response.status))) {
-    const accessTokenData = await response
-      .json()
-      .then((data) => data as AccessTokenResponse);
-    const accessToken = accessTokenData.data?.accessToken;
-    setToken(accessToken);
-  }
-};
-
 const beforeRequest: BeforeRequestHook = ({ request }) => {
   const token = getToken();
   if (token) {
@@ -68,7 +67,6 @@ const beforeRequest: BeforeRequestHook = ({ request }) => {
 };
 
 const baseHooks: Hooks = {
-  afterResponse: [afterResponseAccessToken],
   beforeRequest: [beforeRequest],
 };
 
@@ -81,6 +79,115 @@ const isPlainObject = (val: unknown) =>
   val !== null &&
   typeof val === 'object' &&
   Object.getPrototypeOf(val) === Object.prototype;
+
+function shouldRefreshAccessToken(request: Request) {
+  const pathname = new URL(request.url).pathname;
+
+  return !['/auth/login', '/auth/register', '/auth/refresh'].some((path) =>
+    pathname.endsWith(path)
+  );
+}
+
+function redirectToLogin() {
+  if (typeof window === 'undefined' || window.location.pathname === '/login') {
+    return;
+  }
+  const redirect = `${window.location.pathname}${window.location.search}`;
+  window.location.replace(`/login?redirect=${encodeURIComponent(redirect)}`);
+}
+
+function createRetryRequest(request: Request, accessToken: string) {
+  const headers = new Headers(request.headers);
+  headers.set('Authorization', `Bearer ${accessToken}`);
+
+  return new Request(request, { headers });
+}
+
+function waitForRefreshedRequest(request: Request) {
+  return new Promise<Request>((resolve, reject) => {
+    requestsQueue.push({ request, resolve, reject });
+  });
+}
+
+function resolveRequestsQueue(accessToken: string) {
+  while (requestsQueue.length > 0) {
+    const pendingRequest = requestsQueue.shift();
+
+    if (pendingRequest) {
+      pendingRequest.resolve(
+        createRetryRequest(pendingRequest.request, accessToken)
+      );
+    }
+  }
+}
+
+function rejectRequestsQueue(error: unknown) {
+  while (requestsQueue.length > 0) {
+    requestsQueue.shift()?.reject(error);
+  }
+}
+
+async function refreshAccessToken() {
+  isRefreshing = true;
+
+  try {
+    const response = await ky
+      .post(`${API_PREFIX}/auth/refresh`, {
+        credentials: 'include',
+        retry: 0,
+        timeout: TIME_OUT,
+      })
+      .json<AccessTokenResponse>();
+    const accessToken = response.data?.accessToken;
+
+    if (!accessToken) {
+      throw new Error('Refresh response does not include an access token');
+    }
+
+    setToken(accessToken);
+    resolveRequestsQueue(accessToken);
+
+    return accessToken;
+  } catch (error) {
+    rejectRequestsQueue(error);
+    throw error;
+  } finally {
+    isRefreshing = false;
+  }
+}
+
+const afterResponseRefreshToken: AfterResponseHook = async ({
+  request,
+  response,
+  retryCount,
+}) => {
+  if (response.status !== 401 || !shouldRefreshAccessToken(request)) {
+    return;
+  }
+
+  if (retryCount > 0) {
+    removeToken();
+    redirectToLogin();
+    showToast.error('登录已过期，请重新登录');
+    return;
+  }
+
+  try {
+    const retryRequest = isRefreshing
+      ? await waitForRefreshedRequest(request)
+      : createRetryRequest(request, await refreshAccessToken());
+
+    return ky.retry({
+      request: retryRequest,
+      code: 'TOKEN_REFRESHED',
+      delay: 0,
+    });
+  } catch {
+    removeToken();
+    redirectToLogin();
+    showToast.error('登录已过期，请重新登录');
+  }
+};
 
 async function base<T>(
   url: string,
@@ -108,7 +215,10 @@ async function base<T>(
   const client = baseClient.extend({
     hooks: {
       ...baseHooks,
-      afterResponse: [afterResponseErrorCode(otherOptions)],
+      afterResponse: [
+        afterResponseRefreshToken,
+        afterResponseErrorCode(otherOptions),
+      ],
     },
   });
   let res: Response;
