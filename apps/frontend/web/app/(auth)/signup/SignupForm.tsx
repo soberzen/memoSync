@@ -4,6 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Eye, EyeOff } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { z } from 'zod';
@@ -49,6 +50,8 @@ export default function SignupForm({ onVisualStateChange }: SignupFormProps) {
   const [focusedPasswordField, setFocusedPasswordField] = useState<
     'password' | 'confirmPassword' | null
   >(null);
+
+  const router = useRouter();
 
   const form = useForm<SignupFormValues>({
     resolver: zodResolver(signupSchema),
@@ -105,6 +108,7 @@ export default function SignupForm({ onVisualStateChange }: SignupFormProps) {
         showToast.success('注册成功', {
           description: '现在可以使用邮箱和密码登录了',
         });
+        router.push('/login');
       })
       .catch(() => {
         showToast.error('注册失败', {
