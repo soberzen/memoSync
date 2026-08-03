@@ -12,6 +12,7 @@ import eslintConfigPrettier from 'eslint-config-prettier';
 const ignores = [
   'dist',
   'build',
+  '**/.next/**',
   '**/*.js',
   '**/*.mjs',
   '**/*.d.ts',
@@ -19,14 +20,26 @@ const ignores = [
   'commitlint.config.js',
 ];
 
+const frontendFiles = ['apps/frontend/web/**/*.{js,jsx,ts,tsx}'];
+
+const scopeToFrontend = (config) => ({
+  ...config,
+  files: frontendFiles,
+});
+
 // 1. 前端 Next.js 配置
 const frontendConfig = [
-  ...nextVitals,
-  ...nextTs,
+  ...nextVitals.map(scopeToFrontend),
+  ...nextTs.map(scopeToFrontend),
   {
-    files: ['apps/frontend/web/**/*.{ts,tsx}'],
+    files: frontendFiles,
     plugins: {
       react: eslintPluginReact,
+    },
+    settings: {
+      next: {
+        rootDir: 'apps/frontend/web/',
+      },
     },
     rules: {
       'react/react-in-jsx-scope': 'off',
@@ -38,7 +51,6 @@ const frontendConfig = [
 const commonConfig = {
   files: ['packages/**/*.{js,jsx,ts,tsx}'],
   plugins: {
-    react: eslintPluginReact,
     'react-hooks': pluginReactHooks,
   },
   languageOptions: {
@@ -53,7 +65,7 @@ const commonConfig = {
 };
 
 // 3. 后端配置
-const backenConfig = {
+const backendConfig = {
   files: ['apps/backend/**/*.ts'],
   languageOptions: {
     globals: {
@@ -76,7 +88,7 @@ export default defineConfig([
   eslint.configs.recommended,
   typescript.configs.recommended,
   ...frontendConfig,
-  backenConfig,
+  backendConfig,
   commonConfig,
   {
     files: ['**/*.{js,jsx,ts,tsx}'],
