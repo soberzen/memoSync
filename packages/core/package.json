@@ -1,0 +1,37 @@
+{
+  "name": "@memo-sync/core",
+  "version": "0.0.0",
+  "description": "基于 Prosemirror 和 Tiptap 实现的类 Notion、飞书文档风格可扩展文本编辑器。",
+  "main": "dist/index.mjs",
+  "types": "dist/index.d.mts",
+  "module": "dist/index.mjs",
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "types": "./dist/index.d.mts"
+    }
+  },
+  "scripts": {
+    "build": "tsdown",
+    "dev": "tsdown --watch",
+    "clean": "rm -rf dist",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [
+    "editor",
+    "tiptap",
+    "memo-sync",
+    "wysiwyg",
+    "prosemirror"
+  ],
+  "author": "sober",
+  "type": "module",
+  "dependencies": {
+    "@tiptap/core": "^3.29.2",
+    "@tiptap/pm": "^3.29.2",
+    "shiki": "^4.4.1"
+  },
+  "devDependencies": {
+    "tsdown": "^0.22.14"
+  }
+}
